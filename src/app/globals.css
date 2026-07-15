@@ -135,7 +135,7 @@ button { font-family: inherit; cursor: pointer; }
 .turn-banner.mine { color: var(--ally); }
 
 /* 相手手札(裏向き) */
-.opp-hand-row { display: flex; gap: 4px; justify-content: center; min-height: 34px; padding: 0.2rem 1rem 0; }
+.opp-hand-row { display: flex; gap: 4px; justify-content: center; min-height: 34px; padding: 0.2rem 1rem 0; flex-wrap: wrap; }
 .card-back {
   width: 24px; height: 34px; border-radius: 3px;
   border: 1px solid rgba(233, 223, 198, 0.35);
@@ -176,7 +176,7 @@ button { font-family: inherit; cursor: pointer; }
 .flag-marker .flag-num { font-family: var(--font-mono); font-size: 0.6rem; display: block; text-align: center; color: var(--parchment-dim); }
 .flag-you { color: var(--ally); transform: translateY(24px) rotate(8deg); }
 .flag-opp { color: var(--enemy); transform: translateY(-24px) rotate(-8deg); }
-.env-row { display: flex; gap: 3px; min-height: 16px; }
+.env-row { display: flex; gap: 3px; min-height: 16px; justify-content: center; }
 .env-chip {
   font-size: 0.62rem; padding: 0 0.5em; border: 1px solid var(--bronze-dim);
   color: var(--bronze); background: var(--leather); border-radius: 8px;

@@ -3,3 +3,8 @@ server.log
 *.log
 .DS_Store
 .devcontainer
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.env*.local
