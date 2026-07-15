@@ -427,6 +427,20 @@ $('btn-rematch').addEventListener('click', async () => {
 $('btn-pass').addEventListener('click', () => sendMove({ type: 'pass' }));
 $('btn-cancel-action').addEventListener('click', () => { action = { mode: 'idle' }; renderGame(state); });
 
+function renderTacticList() {
+  const wrap = $('tactic-list');
+  wrap.innerHTML = '';
+  for (const key of Object.keys(TACTICS)) {
+    const t = TACTICS[key];
+    const item = document.createElement('div');
+    item.className = 'tactic-item';
+    item.innerHTML = `<span class="t-mark">${t.mark}</span><div class="tactic-body"><b>${t.name}</b><span>${t.desc}</span></div>`;
+    wrap.appendChild(item);
+  }
+}
+$('btn-help').addEventListener('click', () => { renderTacticList(); $('help-overlay').hidden = false; });
+$('btn-help-close').addEventListener('click', () => { $('help-overlay').hidden = true; });
+
 $('draw-troop').addEventListener('click', () => setDraw('troop'));
 $('draw-tactic').addEventListener('click', () => setDraw('tactic'));
 function setDraw(v) {
