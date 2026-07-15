@@ -374,16 +374,20 @@ function escapeHtml(s) {
 
 /* ---------- イベント ---------- */
 
-$('btn-create').addEventListener('click', async () => {
+$('btn-create').addEventListener('click', () => createRoom(false));
+$('btn-vs-com').addEventListener('click', () => createRoom(true));
+
+async function createRoom(vsCom) {
   try {
-    const res = await api('/api/rooms', { method: 'POST' });
+    const res = await api('/api/rooms', { method: 'POST', body: { vsCom } });
     roomId = res.roomId;
     token = res.token;
     localStorage.setItem(tokenKey(roomId), token);
     history.pushState({}, '', `/room/${roomId}`);
     startPolling();
+    if (vsCom) await api(`/api/rooms/${roomId}/start`, { method: 'POST', body: { token } });
   } catch (e) { toast(e.message); }
-});
+}
 
 $('btn-join').addEventListener('click', () => {
   $('join-modal').hidden = false;

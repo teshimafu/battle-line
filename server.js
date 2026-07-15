@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
 const { newGame, applyMove, sanitize } = require('./game');
+const { chooseComMove } = require('./com');
 
 const app = express();
 app.use(express.json());
@@ -29,13 +30,37 @@ function getRoom(req, res) {
 }
 
 function seatOf(room, token) {
+  if (!token) return -1;
   return room.players.findIndex(p => p.token === token);
+}
+
+function comSeatOf(room) {
+  return room.players.findIndex(p => p.isCom);
+}
+
+// COMの手番なら、少し間を置いてから着手させる(考えている演出も兼ねる)
+function scheduleComTurn(room) {
+  const comSeat = comSeatOf(room);
+  if (comSeat < 0) return;
+  const step = () => {
+    if (!rooms.has(room.id)) return;
+    if (!room.game || room.game.winner != null || room.game.turn !== comSeat) return;
+    const names = ['プレイヤー1', 'COM'];
+    const move = chooseComMove(room.game, comSeat);
+    applyMove(room.game, comSeat, move, names);
+    room.updated = Date.now();
+    if (room.game.winner != null) { room.phase = 'finished'; return; }
+    setTimeout(step, 500 + Math.floor(Math.random() * 700));
+  };
+  setTimeout(step, 500 + Math.floor(Math.random() * 700));
 }
 
 app.post('/api/rooms', (req, res) => {
   const id = newRoomId();
   const token = crypto.randomBytes(16).toString('hex');
-  rooms.set(id, { id, players: [{ token }], phase: 'waiting', game: null, updated: Date.now() });
+  const players = [{ token }];
+  if (req.body && req.body.vsCom) players.push({ token: null, isCom: true });
+  rooms.set(id, { id, players, phase: 'waiting', game: null, updated: Date.now() });
   res.json({ roomId: id, token, seat: 0 });
 });
 
@@ -57,6 +82,7 @@ app.post('/api/rooms/:id/start', (req, res) => {
   if (room.phase === 'playing') return res.status(400).json({ error: 'すでに開始しています' });
   room.game = newGame();
   room.phase = 'playing';
+  scheduleComTurn(room);
   res.json({ ok: true });
 });
 
@@ -74,10 +100,11 @@ app.post('/api/rooms/:id/move', (req, res) => {
   const seat = seatOf(room, req.body && req.body.token);
   if (seat < 0) return res.status(403).json({ error: 'この部屋の参加者ではありません' });
   if (room.phase !== 'playing' || !room.game) return res.status(400).json({ error: 'ゲームが開始されていません' });
-  const names = ['プレイヤー1', 'プレイヤー2'];
+  const names = comSeatOf(room) >= 0 ? ['プレイヤー1', 'COM'] : ['プレイヤー1', 'プレイヤー2'];
   const result = applyMove(room.game, seat, req.body.move || {}, names);
   if (result.error) return res.status(400).json({ error: result.error });
   if (room.game.winner != null) room.phase = 'finished';
+  else scheduleComTurn(room);
   res.json({ ok: true, game: sanitize(room.game, seat) });
 });
 

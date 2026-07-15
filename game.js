@@ -412,4 +412,7 @@ function sanitize(g, seat) {
   };
 }
 
-module.exports = { newGame, applyMove, sanitize, TACTIC_INFO };
+module.exports = {
+  newGame, applyMove, sanitize, TACTIC_INFO,
+  needOf, fogged, bestScore, bestPossible, unseenPool, hasLegalTroopPlacement,
+};
