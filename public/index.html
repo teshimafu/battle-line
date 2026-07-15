@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BATTLE LINE — バトルライン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Spline+Sans+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ホーム -->
+<section id="view-home" class="view">
+  <div class="home-inner">
+    <p class="eyebrow">TWO-PLAYER CARD BATTLE</p>
+    <h1 class="title">BATTLE<span class="title-rule"></span>LINE</h1>
+    <p class="tagline">9本のフラッグを挟んで、編成の強さを競い合う。<br>5本、または隣接する3本を制した者が勝者となる。</p>
+    <div class="home-actions">
+      <button id="btn-create" class="btn btn-primary">部屋を作る</button>
+      <button id="btn-join" class="btn btn-ghost">部屋に入る</button>
+    </div>
+    <p id="home-error" class="error-text" hidden></p>
+  </div>
+</section>
+
+<!-- 入室モーダル -->
+<div id="join-modal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
+    <h2 id="join-title">部屋に入る</h2>
+    <p class="modal-help">相手から共有された部屋IDを入力してください。</p>
+    <input id="join-input" class="code-input" maxlength="6" autocomplete="off"
+           placeholder="ABC123" spellcheck="false">
+    <p id="join-error" class="error-text" hidden></p>
+    <div class="modal-actions">
+      <button id="join-cancel" class="btn btn-ghost">キャンセル</button>
+      <button id="join-submit" class="btn btn-primary">入室する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 待機室 -->
+<section id="view-waiting" class="view" hidden>
+  <div class="home-inner">
+    <p class="eyebrow">ROOM</p>
+    <div class="room-code-wrap">
+      <span id="waiting-code" class="room-code">------</span>
+      <button id="btn-copy" class="btn btn-ghost btn-small">IDをコピー</button>
+    </div>
+    <div id="waiting-status" class="waiting-status">
+      <span class="pulse"></span>対戦相手の参加を待っています…
+    </div>
+    <button id="btn-start" class="btn btn-primary" hidden>ゲーム開始</button>
+    <p class="modal-help">このページのURLを相手に送るだけでも入室できます。</p>
+  </div>
+</section>
+
+<!-- ゲーム -->
+<section id="view-game" class="view view-game" hidden>
+  <header class="game-header">
+    <div class="opp-info">
+      <span class="side-label side-opp">相手</span>
+      <span class="hand-count">手札 <b id="opp-troop">0</b><small>部隊</small> + <b id="opp-tactic">0</b><small>戦術</small></span>
+      <span class="hand-count">使用済戦術 <b id="opp-used">0</b></span>
+    </div>
+    <div id="turn-banner" class="turn-banner">—</div>
+    <div class="deck-info">
+      <span>部隊山 <b id="deck-troop">0</b></span>
+      <span>戦術山 <b id="deck-tactic">0</b></span>
+    </div>
+  </header>
+
+  <div id="opp-hand-row" class="opp-hand-row"></div>
+
+  <main class="board-scroll">
+    <div id="board" class="board"></div>
+  </main>
+
+  <div id="hint-bar" class="hint-bar" hidden></div>
+
+  <footer class="game-footer">
+    <div id="my-hand" class="my-hand"></div>
+    <div class="footer-side">
+      <div class="draw-pref">
+        <span>次に引く山札</span>
+        <div class="seg">
+          <button id="draw-troop" class="seg-btn active">部隊</button>
+          <button id="draw-tactic" class="seg-btn">戦術</button>
+        </div>
+      </div>
+      <button id="btn-pass" class="btn btn-ghost btn-small" hidden>パス</button>
+      <button id="btn-cancel-action" class="btn btn-ghost btn-small" hidden>選択をやめる</button>
+    </div>
+  </footer>
+
+  <aside id="log-panel" class="log-panel"></aside>
+
+  <div id="result-overlay" class="modal-backdrop" hidden>
+    <div class="modal result-modal">
+      <h2 id="result-title">勝利!</h2>
+      <p id="result-reason"></p>
+      <div class="modal-actions">
+        <button id="btn-rematch" class="btn btn-primary">もう一度対戦する</button>
+        <a href="/" class="btn btn-ghost">トップへ戻る</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="toast" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>
