@@ -1,15 +1,29 @@
 {
   "name": "battle-line",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
+  "description": "バトルライン(Battle Line)の2人対戦Webアプリ",
+  "private": true,
   "scripts": {
-    "start": "node server.js"
+    "dev": "node node_modules/next/dist/bin/next dev",
+    "build": "node node_modules/next/dist/bin/next build",
+    "start": "node node_modules/next/dist/bin/next start -p ${PORT:-3000}",
+    "lint": "node node_modules/next/dist/bin/next lint",
+    "test": "node ./node_modules/tsx/dist/cli.mjs test.js",
+    "test:e2e": "node e2e.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "express": "^5.2.1"
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }
