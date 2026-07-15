@@ -22,6 +22,7 @@
   --c0: #c8452f; --c1: #d97e26; --c2: #c2a12b; --c3: #4a8f3c; --c4: #3a6fb0; --c5: #7d4fa3;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
   background: var(--ink);
