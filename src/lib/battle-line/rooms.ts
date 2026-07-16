@@ -1,7 +1,7 @@
 /* 部屋(対戦ルーム)のメモリ管理 */
 
 import crypto from 'crypto';
-import { applyMove, type GameState, type Seat, type Move } from './game';
+import { applyMove, checkTurnTimeout, type GameState, type Seat, type Move } from './game';
 import { chooseComMove } from './com';
 
 export interface Player {
@@ -59,6 +59,15 @@ export function comSeatOf(room: Room): number {
 
 function namesOf(room: Room): [string, string] {
   return comSeatOf(room) >= 0 ? ['プレイヤー1', 'COM'] : ['プレイヤー1', 'プレイヤー2'];
+}
+
+// 手番の制限時間切れをチェックし、決着していれば部屋のフェーズも更新する。
+// ポーリング(state取得)のたびに呼ぶことで、画面が放置されたゲームも
+// サーバー側で自然に決着させる。
+export function syncTimeout(room: Room): void {
+  if (!room.game || room.phase !== 'playing') return;
+  checkTurnTimeout(room.game, namesOf(room));
+  if (room.game.winner != null || room.game.draw) room.phase = 'finished';
 }
 
 // COMの手番なら、少し間を置いてから着手させる(考えている演出も兼ねる)

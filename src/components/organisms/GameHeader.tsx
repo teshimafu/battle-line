@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/atoms/Badge';
+import { TurnTimer } from '@/components/atoms/TurnTimer';
 import type { SanitizedState } from '@/lib/battle-line/game';
 
 export interface GameHeaderProps {
@@ -10,8 +11,9 @@ export interface GameHeaderProps {
 }
 
 export function GameHeader({ game, myTurn, onHelp }: GameHeaderProps) {
+  const gameOver = game.winner != null || game.draw;
   let bannerText: string;
-  if (game.winner != null || game.draw) bannerText = 'ゲーム終了';
+  if (gameOver) bannerText = 'ゲーム終了';
   else if (game.pendingScout === game.seat) bannerText = '偵察:2枚戻してください';
   else bannerText = myTurn ? 'あなたの手番' : '相手の手番…';
 
@@ -28,7 +30,10 @@ export function GameHeader({ game, myTurn, onHelp }: GameHeaderProps) {
           使用済戦術 <b>{game.tacticsPlayed[1 - game.seat]}</b>
         </span>
       </div>
-      <div className={`turn-banner${myTurn ? ' mine' : ''}`}>{bannerText}</div>
+      <div className={`turn-banner${myTurn ? ' mine' : ''}`}>
+        {bannerText}
+        <TurnTimer deadline={game.turnDeadline} active={!gameOver} />
+      </div>
       <div className="deck-info">
         <span>
           部隊山 <b>{game.decks.troop}</b>

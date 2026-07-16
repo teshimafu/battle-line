@@ -141,6 +141,11 @@ button { font-family: inherit; cursor: pointer; }
   color: var(--bronze);
 }
 .turn-banner.mine { color: var(--ally); }
+.turn-timer {
+  display: block; font-family: var(--font-mono); letter-spacing: 0.05em;
+  font-size: 0.75rem; color: var(--parchment-dim); margin-top: 0.2em;
+}
+.turn-timer.danger { color: var(--enemy); animation: pulse 1s ease-in-out infinite; }
 .post-game-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding: 0.5rem 1rem; border-bottom: 1px solid var(--bronze-dim);
