@@ -8,6 +8,8 @@ import {
   unseenPool,
   needOf,
   fogged,
+  checkTurnTimeout,
+  TURN_TIME_LIMIT_MS,
   type GameState,
   type Card,
   type TroopCard,
@@ -275,6 +277,44 @@ describe('バトルライン: 山札切れによる引き分け', () => {
 
     const r = applyMove(g, g.turn, { type: 'pass' }, names);
     assert.equal(r.error, 'ゲームは終了しています');
+  });
+});
+
+describe('バトルライン: 手番の時間切れ', () => {
+  test('制限時間内なら時間切れにならない', () => {
+    const g = newGame();
+    checkTurnTimeout(g, names);
+    assert.equal(g.winner, null);
+  });
+
+  test('制限時間を超えると、手番だった側の相手が勝利する', () => {
+    const g = newGame();
+    const timedOutSeat: Seat = g.turn;
+    const opponent: Seat = (1 - timedOutSeat) as Seat;
+    g.turnStartedAt = Date.now() - (TURN_TIME_LIMIT_MS + 1000);
+    checkTurnTimeout(g, names);
+    assert.equal(g.winner, opponent);
+    assert.ok(g.winReason);
+  });
+
+  test('applyMove を呼んだ時点でも時間切れが検出され、着手自体は拒否される', () => {
+    const g = newGame();
+    const timedOutSeat: Seat = g.turn;
+    const opponent: Seat = (1 - timedOutSeat) as Seat;
+    g.turnStartedAt = Date.now() - (TURN_TIME_LIMIT_MS + 1000);
+    const r = applyMove(g, timedOutSeat, { type: 'pass' }, names);
+    assert.equal(r.error, 'ゲームは終了しています');
+    assert.equal(g.winner, opponent);
+  });
+
+  test('決着後は時間が経過していても勝者を上書きしない', () => {
+    const g = newGame();
+    g.winner = 0;
+    g.winReason = '5本のフラッグを獲得';
+    g.turnStartedAt = Date.now() - (TURN_TIME_LIMIT_MS + 1000);
+    checkTurnTimeout(g, names);
+    assert.equal(g.winner, 0);
+    assert.equal(g.winReason, '5本のフラッグを獲得');
   });
 });
 

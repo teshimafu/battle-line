@@ -65,6 +65,7 @@ export interface GameState {
   hands: [Card[], Card[]];
   flags: Flag[];
   turn: Seat;
+  turnStartedAt: number;
   winner: Seat | null;
   winReason: string | null;
   draw: boolean;
@@ -130,6 +131,7 @@ export function newGame(): GameState {
     hands,
     flags,
     turn: (Math.floor(Math.random() * 2) as Seat),
+    turnStartedAt: Date.now(),
     winner: null,
     winReason: null,
     draw: false,
@@ -328,11 +330,26 @@ function checkWinner(g: GameState, names: [string, string]): void {
 
 /* ---------- 着手 ---------- */
 
+export const TURN_TIME_LIMIT_MS = 3 * 60 * 1000;
+
+// 手番のプレイヤーが制限時間内に着手しなかった場合、時間切れとして相手の勝利にする。
+// ポーリングのみで放置され続けたゲームでもサーバー側で自然に決着させるための仕組み。
+export function checkTurnTimeout(g: GameState, names: [string, string]): void {
+  if (g.winner != null || g.draw) return;
+  if (Date.now() - g.turnStartedAt < TURN_TIME_LIMIT_MS) return;
+  const timedOutSeat = g.turn;
+  const winner: Seat = (1 - timedOutSeat) as Seat;
+  g.winner = winner;
+  g.winReason = '相手の手番が時間切れ';
+  g.log.push(`${names[timedOutSeat]}が制限時間内に着手しなかったため、${names[winner]}の勝利になりました`);
+}
+
 export function hasLegalTroopPlacement(g: GameState, seat: Seat): boolean {
   return g.flags.some((f) => f.winner == null && f.cards[seat].length < needOf(f));
 }
 
 export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, string]): MoveResult {
+  checkTurnTimeout(g, names);
   if (g.winner != null || g.draw) return { error: 'ゲームは終了しています' };
   if (g.turn !== seat) return { error: 'あなたの手番ではありません' };
   const hand = g.hands[seat];
@@ -496,6 +513,7 @@ function endTurn(g: GameState, seat: Seat, drawPref: DrawPref | null, names: [st
   }
   if (g.log.length > 40) g.log.splice(0, g.log.length - 40);
   g.turn = (1 - seat) as Seat;
+  g.turnStartedAt = Date.now();
 }
 
 /* ---------- プレイヤー視点の状態 ---------- */
@@ -511,6 +529,7 @@ export interface SanitizedFlag {
 export interface SanitizedState {
   seat: Seat;
   turn: Seat;
+  turnDeadline: number;
   winner: Seat | null;
   winReason: string | null;
   draw: boolean;
@@ -531,6 +550,7 @@ export function sanitize(g: GameState, seat: Seat): SanitizedState {
   return {
     seat,
     turn: g.turn,
+    turnDeadline: g.turnStartedAt + TURN_TIME_LIMIT_MS,
     winner: g.winner,
     winReason: g.winReason,
     draw: g.draw,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyMove, sanitize, type Move, type Seat } from '@/lib/battle-line/game';
-import { getRoom, seatOf, comSeatOf, scheduleComTurn } from '@/lib/battle-line/rooms';
+import { getRoom, seatOf, comSeatOf, scheduleComTurn, syncTimeout } from '@/lib/battle-line/rooms';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -11,6 +11,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const seat = seatOf(room, body?.token);
   if (seat < 0) return NextResponse.json({ error: 'この部屋の参加者ではありません' }, { status: 403 });
   if (room.phase !== 'playing' || !room.game) return NextResponse.json({ error: 'ゲームが開始されていません' }, { status: 400 });
+
+  syncTimeout(room);
+  if (room.phase !== 'playing') return NextResponse.json({ ok: true, game: sanitize(room.game, seat as Seat) });
 
   const names: [string, string] = comSeatOf(room) >= 0 ? ['プレイヤー1', 'COM'] : ['プレイヤー1', 'プレイヤー2'];
   const move: Move = body?.move || {};
