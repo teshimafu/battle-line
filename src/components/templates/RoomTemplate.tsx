@@ -10,7 +10,20 @@ export interface RoomTemplateProps {
 }
 
 export function RoomTemplate({ roomId }: RoomTemplateProps) {
-  const { state, joinError, toastMsg, toast, action, setAction, drawPref, setDrawPref, sendMove, startGame } = useGameRoom(roomId);
+  const {
+    state,
+    joinError,
+    toastMsg,
+    toast,
+    action,
+    setAction,
+    drawPref,
+    setDrawPref,
+    sendMove,
+    startGame,
+    pollingActive,
+    resumePolling,
+  } = useGameRoom(roomId);
 
   if (joinError) {
     return (
@@ -24,9 +37,12 @@ export function RoomTemplate({ roomId }: RoomTemplateProps) {
 
   if (!state) return null;
 
+  const showResumeNotice = !pollingActive && state.phase !== 'finished';
+
   if (state.phase === 'waiting' || !state.game) {
     return (
       <>
+        {showResumeNotice && <PollingPausedBanner onResume={resumePolling} />}
         <WaitingRoomTemplate
           roomId={state.roomId}
           ready={state.playerCount >= 2}
@@ -46,15 +62,29 @@ export function RoomTemplate({ roomId }: RoomTemplateProps) {
   }
 
   return (
-    <GameTemplate
-      game={state.game}
-      action={action}
-      setAction={setAction}
-      drawPref={drawPref}
-      setDrawPref={setDrawPref}
-      sendMove={sendMove}
-      toastMsg={toastMsg}
-      startGame={startGame}
-    />
+    <>
+      {showResumeNotice && <PollingPausedBanner onResume={resumePolling} />}
+      <GameTemplate
+        game={state.game}
+        action={action}
+        setAction={setAction}
+        drawPref={drawPref}
+        setDrawPref={setDrawPref}
+        sendMove={sendMove}
+        toastMsg={toastMsg}
+        startGame={startGame}
+      />
+    </>
+  );
+}
+
+function PollingPausedBanner({ onResume }: { onResume: () => void }) {
+  return (
+    <div className="polling-paused-bar">
+      <span>しばらく操作がなかったため自動更新を停止しています</span>
+      <button className="btn btn-ghost btn-small" onClick={onResume}>
+        再開する
+      </button>
+    </div>
   );
 }

@@ -153,6 +153,12 @@ button { font-family: inherit; cursor: pointer; }
   flex-wrap: wrap;
 }
 .post-game-actions { display: flex; gap: 0.6rem; }
+.polling-paused-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.5rem 1rem; border-bottom: 1px solid var(--bronze-dim);
+  background: rgba(181, 80, 60, 0.15); font-size: 0.85rem; color: var(--parchment-dim);
+  flex-wrap: wrap;
+}
 
 /* 相手手札(裏向き) */
 .opp-hand-row { display: flex; gap: 4px; justify-content: center; min-height: 34px; padding: 0.2rem 1rem 0; flex-wrap: wrap; }

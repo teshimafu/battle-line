@@ -24,6 +24,9 @@ function tokenKey(id: string) {
   return `bl_token_${id}`;
 }
 
+const POLL_INTERVAL_MS = 5000;
+const POLL_IDLE_STOP_MS = 5 * 60 * 1000; // これ以上状態に変化がなければポーリングを止める
+
 export function useGameRoom(roomId: string) {
   const [token, setToken] = useState<string | null>(null);
   const [state, setState] = useState<StateResponse | null>(null);
@@ -31,15 +34,30 @@ export function useGameRoom(roomId: string) {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [action, setAction] = useState<Action>({ mode: 'idle' });
   const [drawPref, setDrawPref] = useState<DrawPref>('troop');
-  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [pollingActive, setPollingActive] = useState(true);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tokenRef = useRef<string | null>(null);
+  const lastChangeAt = useRef<number>(Date.now());
+  const lastSnapshot = useRef<string | null>(null);
 
   const toast = useCallback((msg: string) => {
     setToastMsg(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToastMsg(null), 2600);
   }, []);
+
+  const stopPolling = useCallback(
+    (reason?: string) => {
+      if (pollTimer.current) {
+        clearTimeout(pollTimer.current);
+        pollTimer.current = null;
+      }
+      setPollingActive(false);
+      if (reason) toast(reason);
+    },
+    [toast]
+  );
 
   // 偵察待ちに入ったら自動でscoutReturnモードへ、抜けたらidleへ戻す
   useEffect(() => {
@@ -52,20 +70,36 @@ export function useGameRoom(roomId: string) {
   }, [state?.game?.pendingScout, state?.game?.seat]);
 
   const startPolling = useCallback(() => {
-    if (pollTimer.current) clearInterval(pollTimer.current);
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    lastChangeAt.current = Date.now();
+    setPollingActive(true);
     const tick = async () => {
       const t = tokenRef.current;
-      if (!t) return;
-      try {
-        const s = await api<StateResponse>(`/api/rooms/${roomId}/state?token=${t}`);
-        setState(s);
-      } catch {
-        // 一時的な通信断は無視
+      if (t) {
+        try {
+          const s = await api<StateResponse>(`/api/rooms/${roomId}/state?token=${t}`);
+          const snapshot = JSON.stringify(s);
+          if (snapshot !== lastSnapshot.current) {
+            lastSnapshot.current = snapshot;
+            lastChangeAt.current = Date.now();
+          }
+          setState(s);
+          if (s.phase === 'finished') {
+            stopPolling();
+            return;
+          }
+        } catch {
+          // 一時的な通信断は無視
+        }
       }
+      if (Date.now() - lastChangeAt.current > POLL_IDLE_STOP_MS) {
+        stopPolling('しばらく操作がなかったため自動更新を停止しました');
+        return;
+      }
+      pollTimer.current = setTimeout(tick, POLL_INTERVAL_MS);
     };
     tick();
-    pollTimer.current = setInterval(tick, 1500);
-  }, [roomId]);
+  }, [roomId, stopPolling]);
 
   const enterRoom = useCallback(async () => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem(tokenKey(roomId)) : null;
@@ -86,7 +120,7 @@ export function useGameRoom(roomId: string) {
   useEffect(() => {
     enterRoom();
     return () => {
-      if (pollTimer.current) clearInterval(pollTimer.current);
+      if (pollTimer.current) clearTimeout(pollTimer.current);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,23 +134,27 @@ export function useGameRoom(roomId: string) {
           method: 'POST',
           body: { token: tokenRef.current, move: { ...move, draw: drawPref } },
         });
-        setState((prev) =>
-          prev ? { ...prev, phase: res.game.winner != null || res.game.draw ? 'finished' : 'playing', game: res.game } : prev
-        );
+        const finished = res.game.winner != null || res.game.draw;
+        setState((prev) => (prev ? { ...prev, phase: finished ? 'finished' : 'playing', game: res.game } : prev));
+        lastChangeAt.current = Date.now();
+        lastSnapshot.current = null;
+        if (finished) stopPolling();
       } catch (e) {
         toast((e as Error).message);
       }
     },
-    [roomId, drawPref, toast]
+    [roomId, drawPref, toast, stopPolling]
   );
 
   const startGame = useCallback(async () => {
     try {
       await api(`/api/rooms/${roomId}/start`, { method: 'POST', body: { token: tokenRef.current } });
+      lastSnapshot.current = null;
+      startPolling(); // 対戦開始/再戦のたびにポーリングを(必要なら)再開する
     } catch (e) {
       toast((e as Error).message);
     }
-  }, [roomId, toast]);
+  }, [roomId, toast, startPolling]);
 
   return {
     token,
@@ -130,5 +168,7 @@ export function useGameRoom(roomId: string) {
     setDrawPref,
     sendMove,
     startGame,
+    pollingActive,
+    resumePolling: startPolling,
   };
 }
