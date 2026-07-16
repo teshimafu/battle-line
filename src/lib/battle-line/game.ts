@@ -67,6 +67,8 @@ export interface GameState {
   turn: Seat;
   winner: Seat | null;
   winReason: string | null;
+  draw: boolean;
+  consecutivePasses: number;
   tacticsPlayed: [number, number];
   leaderUsed: [boolean, boolean];
   discard: Card[];
@@ -130,6 +132,8 @@ export function newGame(): GameState {
     turn: (Math.floor(Math.random() * 2) as Seat),
     winner: null,
     winReason: null,
+    draw: false,
+    consecutivePasses: 0,
     tacticsPlayed: [0, 0],
     leaderUsed: [false, false],
     discard: [],
@@ -272,11 +276,14 @@ function syncCompletion(g: GameState, flag: Flag): void {
   }
 }
 
+// 早期確定(クレーム)の証明に使えるのは、実際に場に出た/捨てられたカードのみ。
+// まだプレイされていないカードは、それが山札にあろうと(自分を含む)どちらの手札に
+// あろうと「相手がまだ入手しうる」ものとして扱う。手札の中身という非公開情報を
+// 根拠に相手の逆転可能性を否定してはいけない。
 export function unseenPool(g: GameState, claimant: Seat): TroopCard[] {
   const visible = new Set<string>();
   for (const f of g.flags) for (const s of [0, 1] as const) for (const c of f.cards[s]) visible.add(c.id);
   for (const c of g.discard) visible.add(c.id);
-  for (const c of g.hands[claimant]) visible.add(c.id);
   return allTroops().filter((c) => !visible.has(c.id));
 }
 
@@ -326,7 +333,7 @@ export function hasLegalTroopPlacement(g: GameState, seat: Seat): boolean {
 }
 
 export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, string]): MoveResult {
-  if (g.winner != null) return { error: 'ゲームは終了しています' };
+  if (g.winner != null || g.draw) return { error: 'ゲームは終了しています' };
   if (g.turn !== seat) return { error: 'あなたの手番ではありません' };
   const hand = g.hands[seat];
   const opp: Seat = (1 - seat) as Seat;
@@ -343,7 +350,7 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
     }
     g.pendingScout = null;
     g.log.push(`${names[seat]}が手札2枚を山札に戻した`);
-    endTurn(g, seat, null, names, true);
+    endTurn(g, seat, null, names, true, false);
     return {};
   }
   if (move.type === 'scoutReturn') return { error: '不正な操作です' };
@@ -353,7 +360,7 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
     if (hasTroop && hasLegalTroopPlacement(g, seat))
       return { error: '配置可能なフラッグがあるためパスできません' };
     g.log.push(`${names[seat]}はパスした`);
-    endTurn(g, seat, move.draw ?? null, names, false);
+    endTurn(g, seat, move.draw ?? null, names, false, true);
     return {};
   }
 
@@ -369,7 +376,7 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
     f.cards[seat].push(card);
     syncCompletion(g, f);
     g.log.push(`${names[seat]}がフラッグ${(move.flag as number) + 1}に${COLOR_NAMES[card.color]}${card.value}を配置`);
-    endTurn(g, seat, move.draw ?? null, names, false);
+    endTurn(g, seat, move.draw ?? null, names, false, false);
     return {};
   }
 
@@ -466,18 +473,26 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
       g.log.push(`${names[seat]}が【${info.name}】を${move.flag != null ? `フラッグ${move.flag + 1}に` : ''}使用`);
     }
     g.tacticsPlayed[seat]++;
-    endTurn(g, seat, move.draw ?? null, names, false);
+    endTurn(g, seat, move.draw ?? null, names, false, false);
     return {};
   }
   return { error: '不明な操作です' };
 }
 
-function endTurn(g: GameState, seat: Seat, drawPref: DrawPref | null, names: [string, string], skipDraw: boolean): void {
+function endTurn(g: GameState, seat: Seat, drawPref: DrawPref | null, names: [string, string], skipDraw: boolean, wasPass: boolean): void {
   resolveFlags(g, names);
+  if (g.winner != null) return;
   if (!skipDraw) {
     let deck = drawPref === 'tactic' ? g.tacticsDeck : g.troopDeck;
     if (!deck.length) deck = drawPref === 'tactic' ? g.troopDeck : g.tacticsDeck;
     if (deck.length) g.hands[seat].push(deck.pop() as Card);
+  }
+  g.consecutivePasses = wasPass ? g.consecutivePasses + 1 : 0;
+  // 山札が尽き、両者が連続でパスして手詰まりになったら引き分けとする
+  if (!g.troopDeck.length && !g.tacticsDeck.length && g.consecutivePasses >= 2) {
+    g.draw = true;
+    g.winReason = '山札が尽き、双方が手詰まりとなったため引き分け';
+    g.log.push('引き分けになりました(山札切れ・双方着手不能)');
   }
   if (g.log.length > 40) g.log.splice(0, g.log.length - 40);
   g.turn = (1 - seat) as Seat;
@@ -498,6 +513,7 @@ export interface SanitizedState {
   turn: Seat;
   winner: Seat | null;
   winReason: string | null;
+  draw: boolean;
   hand: Card[];
   oppHand: { troop: number; tactic: number };
   decks: { troop: number; tactic: number };
@@ -517,6 +533,7 @@ export function sanitize(g: GameState, seat: Seat): SanitizedState {
     turn: g.turn,
     winner: g.winner,
     winReason: g.winReason,
+    draw: g.draw,
     hand: g.hands[seat],
     oppHand: {
       troop: g.hands[opp].filter((c) => c.type === 'troop').length,

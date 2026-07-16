@@ -7,7 +7,7 @@ let finished = 0, maxTurns = 0;
 for (let n = 0; n < 100; n++) {
   const g = newGame();
   let turns = 0;
-  while (g.winner == null && turns < 500) {
+  while (g.winner == null && !g.draw && turns < 500) {
     const seat = g.turn;
     const hand = g.hands[seat];
     // 偵察返却待ち
@@ -56,7 +56,7 @@ for (let n = 0; n < 100; n++) {
     }
     turns++;
   }
-  if (g.winner != null) finished++;
+  if (g.winner != null || g.draw) finished++;
   maxTurns = Math.max(maxTurns, turns);
 }
 console.log(`finished: ${finished}/100, maxTurns: ${maxTurns}`);

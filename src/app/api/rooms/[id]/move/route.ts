@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const move: Move = body?.move || {};
   const result = applyMove(room.game, seat as Seat, move, names);
   if (result.error) return NextResponse.json({ error: result.error }, { status: 400 });
-  if (room.game.winner != null) room.phase = 'finished';
+  if (room.game.winner != null || room.game.draw) room.phase = 'finished';
   else scheduleComTurn(room);
   return NextResponse.json({ ok: true, game: sanitize(room.game, seat as Seat) });
 }

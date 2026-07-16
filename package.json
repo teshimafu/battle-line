@@ -9,6 +9,7 @@
     "start": "node node_modules/next/dist/bin/next start -p ${PORT:-3000}",
     "lint": "node node_modules/next/dist/bin/next lint",
     "test": "node ./node_modules/tsx/dist/cli.mjs test.js",
+    "test:unit": "node ./node_modules/tsx/dist/cli.mjs --test tests/*.test.ts",
     "test:e2e": "node e2e.js"
   },
   "dependencies": {

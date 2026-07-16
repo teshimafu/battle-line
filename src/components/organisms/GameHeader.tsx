@@ -11,7 +11,7 @@ export interface GameHeaderProps {
 
 export function GameHeader({ game, myTurn, onHelp }: GameHeaderProps) {
   let bannerText: string;
-  if (game.winner != null) bannerText = 'ゲーム終了';
+  if (game.winner != null || game.draw) bannerText = 'ゲーム終了';
   else if (game.pendingScout === game.seat) bannerText = '偵察:2枚戻してください';
   else bannerText = myTurn ? 'あなたの手番' : '相手の手番…';
 

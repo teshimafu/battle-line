@@ -84,9 +84,17 @@ button { font-family: inherit; cursor: pointer; }
   display: flex; align-items: center; justify-content: center; z-index: 50;
 }
 .modal {
+  position: relative;
   background: var(--leather); border: 1px solid var(--bronze-dim);
   padding: 2rem 2.4rem; max-width: 420px; width: calc(100% - 2rem);
 }
+.modal-close {
+  position: absolute; top: 0.6rem; right: 0.6rem;
+  width: 1.8rem; height: 1.8rem; border-radius: 50%;
+  background: transparent; border: 1px solid var(--bronze-dim); color: var(--parchment-dim);
+  font-size: 1.1rem; line-height: 1; cursor: pointer;
+}
+.modal-close:hover { color: var(--parchment); border-color: var(--bronze); }
 .modal h2 { font-family: var(--font-display); letter-spacing: 0.1em; margin-bottom: 0.6rem; }
 .modal-help { color: var(--parchment-dim); font-size: 0.85rem; margin-bottom: 1.2rem; }
 .code-input {
@@ -133,6 +141,13 @@ button { font-family: inherit; cursor: pointer; }
   color: var(--bronze);
 }
 .turn-banner.mine { color: var(--ally); }
+.post-game-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.5rem 1rem; border-bottom: 1px solid var(--bronze-dim);
+  background: rgba(10, 11, 8, 0.4); font-family: var(--font-display); letter-spacing: 0.08em;
+  flex-wrap: wrap;
+}
+.post-game-actions { display: flex; gap: 0.6rem; }
 
 /* 相手手札(裏向き) */
 .opp-hand-row { display: flex; gap: 4px; justify-content: center; min-height: 34px; padding: 0.2rem 1rem 0; flex-wrap: wrap; }

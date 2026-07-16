@@ -18,6 +18,8 @@ jobs:
         run: npm run build
       - name: Game logic tests (100 random games)
         run: npm test
+      - name: Unit tests (win conditions, rule invariants)
+        run: npm run test:unit
       - name: API E2E test
         run: |
           npm start &

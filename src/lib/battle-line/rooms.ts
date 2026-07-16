@@ -67,12 +67,12 @@ export function scheduleComTurn(room: Room): void {
   if (comSeat < 0) return;
   const step = () => {
     if (!rooms.has(room.id)) return;
-    if (!room.game || room.game.winner != null || room.game.turn !== comSeat) return;
+    if (!room.game || room.game.winner != null || room.game.draw || room.game.turn !== comSeat) return;
     const names = namesOf(room);
     const move: Move = chooseComMove(room.game, comSeat as Seat);
     applyMove(room.game, comSeat as Seat, move, names);
     room.updated = Date.now();
-    if (room.game.winner != null) { room.phase = 'finished'; return; }
+    if (room.game.winner != null || room.game.draw) { room.phase = 'finished'; return; }
     setTimeout(step, 500 + Math.floor(Math.random() * 700));
   };
   setTimeout(step, 500 + Math.floor(Math.random() * 700));
