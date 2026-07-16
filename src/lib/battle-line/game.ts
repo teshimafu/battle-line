@@ -340,7 +340,7 @@ export function checkTurnTimeout(g: GameState, names: [string, string]): void {
   const timedOutSeat = g.turn;
   const winner: Seat = (1 - timedOutSeat) as Seat;
   g.winner = winner;
-  g.winReason = '相手の手番が時間切れ';
+  g.winReason = '手番の時間切れ';
   g.log.push(`${names[timedOutSeat]}が制限時間内に着手しなかったため、${names[winner]}の勝利になりました`);
 }
 

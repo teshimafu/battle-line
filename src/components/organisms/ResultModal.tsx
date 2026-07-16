@@ -14,6 +14,12 @@ export interface ResultModalProps {
 export function ResultModal({ game, open, onRematch, onClose }: ResultModalProps) {
   if ((game.winner == null && !game.draw) || !open) return null;
   const won = game.winner === game.seat;
+  const timedOut = game.winReason === '手番の時間切れ';
+  const resultText = game.draw
+    ? game.winReason
+    : timedOut
+      ? `${won ? '相手' : 'あなた'}が制限時間内に着手できなかったため、${won ? 'あなた' : '相手'}の勝利です。`
+      : `${won ? 'あなた' : '相手'}が${game.winReason}しました。`;
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal result-modal" onClick={(e) => e.stopPropagation()}>
@@ -21,7 +27,7 @@ export function ResultModal({ game, open, onRematch, onClose }: ResultModalProps
           ×
         </button>
         <h2>{game.draw ? '引き分け' : won ? '勝利!' : '敗北…'}</h2>
-        <p>{game.draw ? game.winReason : `${won ? 'あなた' : '相手'}が${game.winReason}しました。`}</p>
+        <p>{resultText}</p>
         <div className="modal-actions">
           <Button variant="primary" onClick={onRematch}>
             もう一度対戦する
