@@ -100,7 +100,9 @@ export function useGameRoom(roomId: string) {
           method: 'POST',
           body: { token: tokenRef.current, move: { ...move, draw: drawPref } },
         });
-        setState((prev) => (prev ? { ...prev, phase: res.game.winner != null ? 'finished' : 'playing', game: res.game } : prev));
+        setState((prev) =>
+          prev ? { ...prev, phase: res.game.winner != null || res.game.draw ? 'finished' : 'playing', game: res.game } : prev
+        );
       } catch (e) {
         toast((e as Error).message);
       }
