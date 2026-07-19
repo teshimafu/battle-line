@@ -75,7 +75,23 @@ export interface GameState {
   discard: Card[];
   pendingScout: Seat | null;
   seq: number;
-  log: string[];
+  log: LogEntry[];
+  lastPlacement: LastPlacement | null;
+}
+
+// 直近でフラッグに置かれたカード。UIで一定時間ハイライトするために使う。
+export interface LastPlacement {
+  seat: Seat;
+  flag: number;
+  cardId: string;
+  at: number;
+}
+
+// seat: そのログの主体(操作したプレイヤー)。全体的な出来事(引き分けなど)はnull。
+// 表示側(sanitize)が視点に応じて「自分」「相手」に変換する。
+export interface LogEntry {
+  seat: Seat | null;
+  text: string;
 }
 
 export type DrawPref = 'troop' | 'tactic';
@@ -142,6 +158,7 @@ export function newGame(): GameState {
     pendingScout: null,
     seq: 1,
     log: [],
+    lastPlacement: null,
   };
 }
 
@@ -301,14 +318,14 @@ function resolveFlags(g: GameState, names: [string, string]): void {
       const c = cmp(s0, s1);
       const winner: Seat = c > 0 ? 0 : c < 0 ? 1 : ((f.completedAt[0] as number) < (f.completedAt[1] as number) ? 0 : 1);
       f.winner = winner;
-      g.log.push(`フラッグ${i + 1}を${names[f.winner]}が獲得(${RANK_NAMES[(f.winner === 0 ? s0 : s1)[0]]})`);
+      g.log.push({ seat: f.winner, text: `フラッグ${i + 1}を獲得(${RANK_NAMES[(f.winner === 0 ? s0 : s1)[0]]})` });
     } else if (n0 >= need || n1 >= need) {
       const s: Seat = n0 >= need ? 0 : 1;
       const my = bestScore(f.cards[s], need, fog);
       const oppBest = bestPossible(f.cards[1 - s], need, fog, unseenPool(g, s));
       if (!oppBest || cmp(my, oppBest) >= 0) {
         f.winner = s;
-        g.log.push(`フラッグ${i + 1}を${names[s]}が獲得(相手は上回れないことが証明された)`);
+        g.log.push({ seat: s, text: `フラッグ${i + 1}を獲得(相手は上回れないことが証明された)` });
       }
     }
   }
@@ -324,7 +341,7 @@ function checkWinner(g: GameState, names: [string, string]): void {
     for (const x of w) { streak = x === s ? streak + 1 : 0; maxStreak = Math.max(maxStreak, streak); }
     if (total >= 5) { g.winner = s; g.winReason = '5本のフラッグを獲得'; }
     else if (maxStreak >= 3) { g.winner = s; g.winReason = '隣接する3本のフラッグを獲得'; }
-    if (g.winner != null) { g.log.push(`${names[s]}の勝利!(${g.winReason})`); return; }
+    if (g.winner != null) { g.log.push({ seat: s, text: `勝利!(${g.winReason})` }); return; }
   }
 }
 
@@ -341,7 +358,7 @@ export function checkTurnTimeout(g: GameState, names: [string, string]): void {
   const winner: Seat = (1 - timedOutSeat) as Seat;
   g.winner = winner;
   g.winReason = '手番の時間切れ';
-  g.log.push(`${names[timedOutSeat]}が制限時間内に着手しなかったため、${names[winner]}の勝利になりました`);
+  g.log.push({ seat: timedOutSeat, text: '制限時間内に着手できず、時間切れになりました' });
 }
 
 export function hasLegalTroopPlacement(g: GameState, seat: Seat): boolean {
@@ -366,7 +383,7 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
       (c.type === 'tactic' ? g.tacticsDeck : g.troopDeck).push(c); // 山札の上へ
     }
     g.pendingScout = null;
-    g.log.push(`${names[seat]}が手札2枚を山札に戻した`);
+    g.log.push({ seat, text: '手札2枚を山札に戻した' });
     endTurn(g, seat, null, names, true, false);
     return {};
   }
@@ -376,8 +393,9 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
     const hasTroop = hand.some((c) => c.type === 'troop');
     if (hasTroop && hasLegalTroopPlacement(g, seat))
       return { error: '配置可能なフラッグがあるためパスできません' };
-    g.log.push(`${names[seat]}はパスした`);
-    endTurn(g, seat, move.draw ?? null, names, false, true);
+    g.log.push({ seat, text: 'パスした' });
+    // パスは着手していないため、カードを引かずに手番を渡す
+    endTurn(g, seat, move.draw ?? null, names, true, true);
     return {};
   }
 
@@ -392,7 +410,8 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
     hand.splice(move.handIdx as number, 1);
     f.cards[seat].push(card);
     syncCompletion(g, f);
-    g.log.push(`${names[seat]}がフラッグ${(move.flag as number) + 1}に${COLOR_NAMES[card.color]}${card.value}を配置`);
+    g.lastPlacement = { seat, flag: move.flag as number, cardId: card.id, at: Date.now() };
+    g.log.push({ seat, text: `フラッグ${(move.flag as number) + 1}に${COLOR_NAMES[card.color]}${card.value}を配置` });
     endTurn(g, seat, move.draw ?? null, names, false, false);
     return {};
   }
@@ -414,6 +433,7 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
       f.cards[seat].push(card);
       if (k === 'alexander' || k === 'darius') g.leaderUsed[seat] = true;
       syncCompletion(g, f);
+      g.lastPlacement = { seat, flag: move.flag as number, cardId: card.id, at: Date.now() };
     } else if (info.kind === 'env') {
       const f = g.flags[move.flag as number];
       if (!f || f.winner != null) return { error: 'そのフラッグには置けません' };
@@ -432,7 +452,7 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
       }
       g.tacticsPlayed[seat]++;
       g.pendingScout = seat;
-      g.log.push(`${names[seat]}が【偵察】を使用(3枚引き、2枚戻す)`);
+      g.log.push({ seat, text: '【偵察】を使用(3枚引き、2枚戻す)' });
       return {}; // 手番は返却完了まで続く
     } else if (k === 'deserter') {
       const f = g.flags[move.flag as number];
@@ -444,7 +464,7 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
       f.cards[opp].splice(move.idx as number, 1);
       g.discard.push(target);
       syncCompletion(g, f);
-      g.log.push(`${names[seat]}が【脱走】で相手のカードを除外`);
+      g.log.push({ seat, text: '【脱走】で相手のカードを除外' });
     } else if (k === 'traitor') {
       const f = g.flags[move.flag as number];
       const dest = g.flags[move.destFlag as number];
@@ -457,7 +477,8 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
       f.cards[opp].splice(move.idx as number, 1);
       dest.cards[seat].push(target);
       syncCompletion(g, f); syncCompletion(g, dest);
-      g.log.push(`${names[seat]}が【裏切り】で相手の部隊を寝返らせた`);
+      g.lastPlacement = { seat, flag: move.destFlag as number, cardId: target.id, at: Date.now() };
+      g.log.push({ seat, text: '【裏切り】で相手の部隊を寝返らせた' });
     } else if (k === 'redeploy') {
       const f = g.flags[move.flag as number];
       if (!f || f.winner != null) return { error: '未確定のフラッグを選んでください' };
@@ -479,15 +500,16 @@ export function applyMove(g: GameState, seat: Seat, move: Move, names: [string, 
         }
         dest.cards[seat].push(target);
         syncCompletion(g, dest);
+        g.lastPlacement = { seat, flag: move.destFlag as number, cardId: target.id, at: Date.now() };
       }
       syncCompletion(g, f);
-      g.log.push(`${names[seat]}が【再配置】を使用`);
+      g.log.push({ seat, text: '【再配置】を使用' });
     } else {
       return { error: '不明な戦術カードです' };
     }
 
     if (info.kind === 'morale' || info.kind === 'env') {
-      g.log.push(`${names[seat]}が【${info.name}】を${move.flag != null ? `フラッグ${move.flag + 1}に` : ''}使用`);
+      g.log.push({ seat, text: `【${info.name}】を${move.flag != null ? `フラッグ${move.flag + 1}に` : ''}使用` });
     }
     g.tacticsPlayed[seat]++;
     endTurn(g, seat, move.draw ?? null, names, false, false);
@@ -509,7 +531,7 @@ function endTurn(g: GameState, seat: Seat, drawPref: DrawPref | null, names: [st
   if (!g.troopDeck.length && !g.tacticsDeck.length && g.consecutivePasses >= 2) {
     g.draw = true;
     g.winReason = '山札が尽き、双方が手詰まりとなったため引き分け';
-    g.log.push('引き分けになりました(山札切れ・双方着手不能)');
+    g.log.push({ seat: null, text: '引き分けになりました(山札切れ・双方着手不能)' });
   }
   if (g.log.length > 40) g.log.splice(0, g.log.length - 40);
   g.turn = (1 - seat) as Seat;
@@ -542,7 +564,20 @@ export interface SanitizedState {
   canPass: boolean;
   flags: SanitizedFlag[];
   discard: Card[];
-  log: string[];
+  log: SanitizedLogEntry[];
+  lastPlacement: SanitizedLastPlacement | null;
+}
+
+export interface SanitizedLogEntry {
+  who: 'you' | 'opp' | 'system';
+  text: string;
+}
+
+export interface SanitizedLastPlacement {
+  flag: number;
+  who: 'you' | 'opp';
+  cardId: string;
+  at: number;
 }
 
 export function sanitize(g: GameState, seat: Seat): SanitizedState {
@@ -572,6 +607,15 @@ export function sanitize(g: GameState, seat: Seat): SanitizedState {
       need: needOf(f),
     })),
     discard: g.discard,
-    log: g.log.slice(-12),
+    log: g.log.slice(-12).map((e) => ({
+      who: e.seat == null ? 'system' : e.seat === seat ? 'you' : 'opp',
+      text: e.text,
+    })),
+    lastPlacement: g.lastPlacement && {
+      flag: g.lastPlacement.flag,
+      who: g.lastPlacement.seat === seat ? 'you' : 'opp',
+      cardId: g.lastPlacement.cardId,
+      at: g.lastPlacement.at,
+    },
   };
 }

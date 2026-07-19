@@ -224,6 +224,12 @@ button { font-family: inherit; cursor: pointer; }
 }
 .card.tactic .t-mark { font-family: var(--font-display); font-size: 0.85rem; color: var(--bronze-dim); display: block; }
 .card.selectable-target { cursor: pointer; outline: 2px dashed var(--parchment); }
+.card.recent-placement { animation: recent-placement-glow 2.2s ease-in-out infinite; }
+@keyframes recent-placement-glow {
+  0%, 100% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 0 rgba(179, 137, 60, 0.55); }
+  50% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 6px 3px rgba(179, 137, 60, 0.55); }
+}
+@media (prefers-reduced-motion: reduce) { .card.recent-placement { animation: none; outline: 2px solid var(--bronze); } }
 .my-hand .card { width: 56px; height: 76px; cursor: pointer; font-size: 1.5rem; transition: transform 0.12s; }
 .my-hand .card.tactic { font-size: 0.68rem; }
 .my-hand .card.tactic .t-mark { font-size: 1.1rem; }
@@ -253,6 +259,10 @@ button { font-family: inherit; cursor: pointer; }
   max-height: 96px; overflow-y: auto; font-size: 0.72rem; color: var(--parchment-dim);
   padding: 0.3rem 1.2rem; border-top: 1px dashed var(--bronze-dim);
 }
+.log-who { font-weight: 700; margin-right: 0.4em; }
+.log-you .log-who { color: var(--ally); }
+.log-opp .log-who { color: var(--enemy); }
+.log-system { color: var(--bronze); font-style: italic; }
 .result-modal { text-align: center; }
 .result-modal h2 { font-size: 2rem; }
 .result-modal p { color: var(--parchment-dim); margin-top: 0.4rem; }
@@ -268,4 +278,59 @@ button { font-family: inherit; cursor: pointer; }
   .game-header { justify-content: center; }
   .card { width: 40px; height: 34px; font-size: 0.9rem; }
   .my-hand .card { width: 48px; height: 66px; }
+}
+
+/* スマホ横向き: スクロールなしで画面内に収まるようレイアウトを圧縮する */
+@media (orientation: landscape) and (max-height: 520px) {
+  .view-game {
+    height: 100dvh;
+    overflow: hidden;
+    gap: 0.1rem;
+    padding-bottom: 0;
+  }
+  .game-header { padding: 0.2rem 0.6rem; gap: 0.4rem; justify-content: space-between; }
+  .opp-info, .deck-info { font-size: 0.65rem; gap: 0.5rem; }
+  .opp-info b, .deck-info b { font-size: 0.8rem; margin: 0 0.1em; }
+  .turn-banner { font-size: 0.75rem; }
+  .turn-timer { font-size: 0.6rem; margin-top: 0; }
+  .btn-help { width: 1.3rem; height: 1.3rem; font-size: 0.7rem; }
+
+  .post-game-bar, .polling-paused-bar { padding: 0.2rem 0.6rem; font-size: 0.7rem; gap: 0.5rem; }
+  .post-game-actions { gap: 0.4rem; }
+
+  .opp-hand-row { min-height: 18px; padding: 0.05rem 0.6rem 0; gap: 2px; }
+  .card-back { width: 14px; height: 20px; }
+
+  .board-scroll { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; }
+  .board {
+    padding: 0.15rem 0.6rem; grid-template-columns: repeat(9, minmax(44px, 1fr));
+    min-width: 0; gap: 3px; width: 100%;
+  }
+  .lane { gap: 2px; }
+  .slot-col { min-height: 64px; gap: 2px; }
+  .card { width: 28px; height: 24px; font-size: 0.68rem; }
+  .card.tactic { font-size: 0.42rem; }
+  .card.tactic .t-mark { font-size: 0.6rem; }
+  .flag-marker { font-size: 0.85rem; }
+  .flag-marker .flag-num { font-size: 0.5rem; }
+  .flag-you { transform: translateY(10px) rotate(8deg); }
+  .flag-opp { transform: translateY(-10px) rotate(-8deg); }
+  .env-row { min-height: 11px; }
+  .env-chip { font-size: 0.5rem; }
+
+  .hint-bar { font-size: 0.65rem; padding: 0.1em 0.6em; }
+
+  .game-footer { padding: 0.15rem 0.6rem 0.1rem; gap: 0.5rem; align-items: center; }
+  .my-hand { min-height: 44px; gap: 3px; }
+  .my-hand .card { width: 32px; height: 44px; font-size: 0.85rem; }
+  .my-hand .card.tactic { font-size: 0.46rem; }
+  .my-hand .card.tactic .t-mark { font-size: 0.7rem; }
+  .footer-side { gap: 0.2rem; }
+  .draw-pref { font-size: 0.6rem; gap: 0.15rem; }
+  .seg-btn { padding: 0.1em 0.5em; font-size: 0.65rem; }
+
+  .log-panel { max-height: 36px; font-size: 0.58rem; padding: 0.1rem 0.6rem; }
+
+  .modal { padding: 1rem 1.2rem; max-height: 92dvh; overflow-y: auto; }
+  .modal h2 { font-size: 1.2rem; }
 }
