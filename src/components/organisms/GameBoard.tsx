@@ -75,7 +75,7 @@ export function GameBoard({ game, myTurn, action, onPickEnemyCard, onPickMyCard,
                 ))}
               </div>
 
-              <div>
+              <div className="flag-cell">
                 <FlagMarker number={fi + 1} winner={f.winner} onClick={canDrop ? () => onDropOnFlag(fi) : undefined} />
                 <div className="env-row">
                   {f.env.map((k, i) => (
@@ -87,7 +87,7 @@ export function GameBoard({ game, myTurn, action, onPickEnemyCard, onPickMyCard,
               </div>
 
               <div
-                className={`slot-col${canDrop ? ' droppable' : ''}`}
+                className={`slot-col mine${canDrop ? ' droppable' : ''}`}
                 onClick={canDrop ? () => onDropOnFlag(fi) : undefined}
               >
                 {f.mine.map((c, ci) => (
